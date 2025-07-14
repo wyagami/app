@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lançador de Aplicativos</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Define a fonte Inter para todo o corpo */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Cor de fundo suave */
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded-lg shadow-xl max-w-4xl w-full text-center">
+        <h1 class="text-4xl font-bold text-gray-800 mb-6">Meus Aplicativos</h1>
+        <p class="text-gray-600 mb-8">Clique em um ícone para abrir o aplicativo correspondente.</p>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <!-- Exemplo de Aplicativo 1: Google -->
+            <a href="https://wyagami.github.io/compras" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-blue-50 hover:shadow-md transition-all duration-300">
+                <img src="https://placehold.co/100x100/4285F4/FFFFFF?text=Compras" alt="Ícone do Compras" class="w-24 h-24 rounded-full mb-2 shadow-sm">
+                <span class="text-lg font-medium text-gray-700">Compras</span>
+            </a>
+
+            <!-- Exemplo de Aplicativo 2: YouTube -->
+            <a href="https://www.youtube.com" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-red-50 hover:shadow-md transition-all duration-300">
+                <img src="https://placehold.co/100x100/FF0000/FFFFFF?text=YouTube" alt="Ícone do YouTube" class="w-24 h-24 rounded-full mb-2 shadow-sm">
+                <span class="text-lg font-medium text-gray-700">YouTube</span>
+            </a>
+
+            <!-- Exemplo de Aplicativo 3: Facebook -->
+            <a href="https://www.facebook.com" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-blue-100 hover:shadow-md transition-all duration-300">
+                <img src="https://placehold.co/100x100/1877F2/FFFFFF?text=Facebook" alt="Ícone do Facebook" class="w-24 h-24 rounded-full mb-2 shadow-sm">
+                <span class="text-lg font-medium text-gray-700">Facebook</span>
+            </a>
+
+            <!-- Exemplo de Aplicativo 4: Twitter (X) -->
+            <a href="https://twitter.com" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 hover:shadow-md transition-all duration-300">
+                <img src="https://placehold.co/100x100/000000/FFFFFF?text=X" alt="Ícone do Twitter (X)" class="w-24 h-24 rounded-full mb-2 shadow-sm">
+                <span class="text-lg font-medium text-gray-700">Twitter (X)</span>
+            </a>
+
+            <!-- Exemplo de Aplicativo 5: Instagram -->
+            <a href="https://www.instagram.com" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-pink-50 hover:shadow-md transition-all duration-300">
+                <img src="https://placehold.co/100x100/E1306C/FFFFFF?text=Insta" alt="Ícone do Instagram" class="w-24 h-24 rounded-full mb-2 shadow-sm">
+                <span class="text-lg font-medium text-gray-700">Instagram</span>
+            </a>
+
+            <!-- Exemplo de Aplicativo 6: LinkedIn -->
+            <a href="https://www.linkedin.com" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-blue-50 hover:shadow-md transition-all duration-300">
+                <img src="https://placehold.co/100x100/0A66C2/FFFFFF?text=LinkedIn" alt="Ícone do LinkedIn" class="w-24 h-24 rounded-full mb-2 shadow-sm">
+                <span class="text-lg font-medium text-gray-700">LinkedIn</span>
+            </a>
+
+            <!-- Exemplo de Aplicativo 7: GitHub -->
+            <a href="https://github.com" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 hover:shadow-md transition-all duration-300">
+                <img src="https://placehold.co/100x100/333333/FFFFFF?text=GitHub" alt="Ícone do GitHub" class="w-24 h-24 rounded-full mb-2 shadow-sm">
+                <span class="text-lg font-medium text-gray-700">GitHub</span>
+            </a>
+
+            <!-- Exemplo de Aplicativo 8: Spotify -->
+            <a href="https://www.spotify.com" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-green-50 hover:shadow-md transition-all duration-300">
+                <img src="https://placehold.co/100x100/1DB954/FFFFFF?text=Spotify" alt="Ícone do Spotify" class="w-24 h-24 rounded-full mb-2 shadow-sm">
+                <span class="text-lg font-medium text-gray-700">Spotify</span>
+            </a>
+
+            <!-- Exemplo de Aplicativo 9: WhatsApp Web -->
+            <a href="https://web.whatsapp.com" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-green-50 hover:shadow-md transition-all duration-300">
+                <img src="https://placehold.co/100x100/25D366/FFFFFF?text=WhatsApp" alt="Ícone do WhatsApp" class="w-24 h-24 rounded-full mb-2 shadow-sm">
+                <span class="text-lg font-medium text-gray-700">WhatsApp Web</span>
+            </a>
+
+            <!-- Exemplo de Aplicativo 10: Netflix -->
+            <a href="https://www.netflix.com" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-red-50 hover:shadow-md transition-all duration-300">
+                <img src="https://placehold.co/100x100/E50914/FFFFFF?text=Netflix" alt="Ícone da Netflix" class="w-24 h-24 rounded-full mb-2 shadow-sm">
+                <span class="text-lg font-medium text-gray-700">Netflix</span>
+            </a>
+        </div>
+
+        <div class="mt-8 text-sm text-gray-500">
+            <p>
+                <strong>Nota:</strong> Para abrir aplicativos instalados no seu dispositivo (como Word, Excel, etc.), seria necessário um protocolo de URL personalizado (ex: <code>ms-word:</code>, <code>excel:</code>).
+                No entanto, navegadores web modernos têm restrições de segurança que impedem o uso direto desses protocolos por razões de privacidade e segurança.
+                Este exemplo demonstra a abertura de links para sites web.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
