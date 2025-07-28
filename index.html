@@ -1,93 +1,1076 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lançador de Aplicativos</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Define a fonte Inter para todo o corpo */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5; /* Cor de fundo suave */
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Calculator, Package, Trash2, Edit3, Save, X, Download, Upload } from 'lucide-react';
+
+const RecipeCostCalculator = () => {
+  const [products, setProducts] = useState([]);
+  const [savedRecipes, setSavedRecipes] = useState([]);
+  const [conversions, setConversions] = useState({});
+  const [activeTab, setActiveTab] = useState('products');
+  const [showProductForm, setShowProductForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [productForm, setProductForm] = useState({
+    name: '',
+    price: '',
+    quantity: '',
+    unit: 'kg'
+  });
+  const [recipeForm, setRecipeForm] = useState({
+    name: '',
+    ingredients: '',
+    additionalCosts: '',
+    profitMargin: ''
+  });
+  const [calculationResult, setCalculationResult] = useState(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [pendingConversions, setPendingConversions] = useState([]);
+  const [showConversionModal, setShowConversionModal] = useState(false);
+  const [editingConversion, setEditingConversion] = useState(null);
+
+  // New states for custom modals
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [recipeToDelete, setRecipeToDelete] = useState(null);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  // Ref for file input for import functionality
+  const fileInputRef = useRef(null);
+
+  const units = ['kg', 'g', 'l', 'ml', 'unidade', 'dúzia', 'copo', 'colher de sopa', 'colher de chá', 'xícara'];
+
+  // Conversões padrão
+  const defaultConversions = {
+    'g_to_kg': 0.001,
+    'ml_to_l': 0.001,
+    'copo_to_ml': 200,
+    'xícara_to_ml': 240,
+    'colher de sopa_to_ml': 15,
+    'colher de chá_to_ml': 5,
+    'dúzia_to_unidade': 12
+  };
+
+  // Load data from localStorage on component mount
+  useEffect(() => {
+    const savedProducts = localStorage.getItem('recipe-products');
+    const savedConversions = localStorage.getItem('recipe-conversions');
+    const savedRecipesList = localStorage.getItem('saved-recipes');
+    if (savedProducts) setProducts(JSON.parse(savedProducts));
+    if (savedConversions) setConversions(JSON.parse(savedConversions));
+    if (savedRecipesList) setSavedRecipes(JSON.parse(savedRecipesList));
+  }, []);
+
+  // Save products to localStorage whenever products state changes
+  useEffect(() => {
+    localStorage.setItem('recipe-products', JSON.stringify(products));
+  }, [products]);
+
+  // Save conversions to localStorage whenever conversions state changes
+  useEffect(() => {
+    localStorage.setItem('recipe-conversions', JSON.stringify(conversions));
+  }, [conversions]);
+
+  // Save savedRecipes to localStorage whenever savedRecipes state changes
+  useEffect(() => {
+    localStorage.setItem('saved-recipes', JSON.stringify(savedRecipes));
+  }, [savedRecipes]);
+
+  // Handle product form submission (add or edit product)
+  const handleProductSubmit = () => {
+    if (editingProduct) {
+      setProducts(products.map(p =>
+        p.id === editingProduct.id
+          ? { ...productForm, id: editingProduct.id }
+          : p
+      ));
+      setEditingProduct(null);
+    } else {
+      const newProduct = {
+        ...productForm,
+        id: Date.now(),
+        price: parseFloat(productForm.price),
+        quantity: parseFloat(productForm.quantity)
+      };
+      setProducts([...products, newProduct]);
+    }
+    setProductForm({ name: '', price: '', quantity: '', unit: 'kg' });
+    setShowProductForm(false);
+  };
+
+  // Delete a product from the list
+  const deleteProduct = (id) => {
+    setProducts(products.filter(p => p.id !== id));
+  };
+
+  // Set product for editing
+  const editProduct = (product) => {
+    setProductForm(product);
+    setEditingProduct(product);
+    setShowProductForm(true);
+  };
+
+  // Parse ingredients from a multiline string into an array of objects
+  const parseIngredients = (ingredientsText) => {
+    const lines = ingredientsText.split('\n').filter(line => line.trim());
+    const ingredients = [];
+
+    for (const line of lines) {
+      const match = line.match(/(\d+(?:\.\d+)?)\s*(\w+(?:\s+\w+)*)\s+(?:de\s+)?(.+)/i);
+      if (match) {
+        const [, quantity, unit, ingredient] = match;
+        ingredients.push({
+          quantity: parseFloat(quantity),
+          unit: unit.toLowerCase().trim(),
+          name: ingredient.toLowerCase().trim()
+        });
+      }
+    }
+    return ingredients;
+  };
+
+  // Save the calculated recipe
+  const saveRecipe = () => {
+    if (!calculationResult || !calculationResult.recipeName) {
+      setSuccessMessage('Por favor, calcule uma receita com nome antes de salvar.');
+      setShowSuccessMessage(true);
+      return;
+    }
+
+    const recipeToSave = {
+      id: Date.now(),
+      name: calculationResult.recipeName,
+      ingredients: calculationResult.ingredients,
+      additionalCosts: calculationResult.additionalCosts,
+      profitMargin: calculationResult.profitMargin,
+      ingredientsCost: calculationResult.ingredientsCost,
+      totalCost: calculationResult.totalCost,
+      profitValue: calculationResult.profitValue,
+      sellingPrice: calculationResult.sellingPrice,
+      details: calculationResult.details,
+      createdAt: new Date().toLocaleDateString('pt-BR')
+    };
+
+    setSavedRecipes(prev => [...prev, recipeToSave]);
+    setShowSaveModal(false);
+    setSuccessMessage('Receita salva com sucesso!');
+    setShowSuccessMessage(true);
+  };
+
+  // Load a saved recipe into the calculator form
+  const loadRecipe = (recipe) => {
+    setRecipeForm({
+      name: recipe.name,
+      ingredients: recipe.ingredients,
+      additionalCosts: recipe.additionalCosts.toString(),
+      profitMargin: recipe.profitMargin.toString()
+    });
+    setActiveTab('calculator');
+    // Set the calculation result to the loaded recipe's result for display
+    setCalculationResult({
+      recipeName: recipe.name,
+      ingredients: recipe.ingredients,
+      ingredientsCost: recipe.ingredientsCost,
+      additionalCosts: recipe.additionalCosts,
+      totalCost: recipe.totalCost,
+      profitMargin: recipe.profitMargin,
+      profitValue: recipe.profitValue,
+      sellingPrice: recipe.sellingPrice,
+      details: recipe.details,
+    });
+  };
+
+  // Confirm deletion of a recipe
+  const confirmDeleteRecipe = (id) => {
+    setRecipeToDelete(id);
+    setShowDeleteConfirmModal(true);
+  };
+
+  // Delete a recipe after confirmation
+  const deleteRecipe = () => {
+    setSavedRecipes(prev => prev.filter(r => r.id !== recipeToDelete));
+    setShowDeleteConfirmModal(false);
+    setRecipeToDelete(null);
+    setSuccessMessage('Receita deletada com sucesso!');
+    setShowSuccessMessage(true);
+  };
+
+  // Convert units based on stored or default conversions
+  const convertUnits = (fromUnit, toUnit, quantity) => {
+    const conversionKey = `${fromUnit}_to_${toUnit}`;
+
+    if (conversions[conversionKey]) {
+      return quantity * conversions[conversionKey];
+    }
+
+    if (defaultConversions[conversionKey]) {
+      return quantity * defaultConversions[conversionKey];
+    }
+
+    // Inverse conversions
+    const inverseKey = `${toUnit}_to_${fromUnit}`;
+    if (conversions[inverseKey]) {
+      return quantity / conversions[inverseKey];
+    }
+
+    if (defaultConversions[inverseKey]) {
+      return quantity / defaultConversions[inverseKey];
+    }
+
+    return null;
+  };
+
+  // Calculate the total cost of the recipe
+  const calculateRecipeCost = () => {
+    const ingredients = parseIngredients(recipeForm.ingredients);
+    let totalCost = 0;
+    let missingConversions = [];
+    let calculationDetails = [];
+
+    for (const ingredient of ingredients) {
+      const product = products.find(p =>
+        p.name.toLowerCase().includes(ingredient.name) ||
+        ingredient.name.includes(p.name.toLowerCase())
+      );
+
+      if (product) {
+        let convertedQuantity = ingredient.quantity;
+
+        if (ingredient.unit !== product.unit) {
+          const converted = convertUnits(ingredient.unit, product.unit, ingredient.quantity);
+
+          if (converted === null) {
+            missingConversions.push({
+              ingredient: ingredient.name,
+              fromUnit: ingredient.unit,
+              toUnit: product.unit,
+              quantity: ingredient.quantity
+            });
+            continue;
+          }
+
+          convertedQuantity = converted;
         }
-    </style>
-</head>
-<body class="flex items-center justify-center min-h-screen p-4">
-    <div class="bg-white p-8 rounded-lg shadow-xl max-w-4xl w-full text-center">
-        <h1 class="text-4xl font-bold text-gray-800 mb-6">Meus Aplicativos</h1>
-        <p class="text-gray-600 mb-8">Clique em um ícone para abrir o aplicativo correspondente.</p>
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            <!-- Exemplo de Aplicativo 1: Compras -->
-            <a href="https://wyagami.github.io/compras" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-blue-50 hover:shadow-md transition-all duration-300">
-                <img src="https://placehold.co/100x100/4285F4/FFFFFF?text=Compras" alt="Ícone do Compras" class="w-24 h-24 rounded-full mb-2 shadow-sm">
-                <span class="text-lg font-medium text-gray-700">Compras</span>
-            </a>
+        const unitCost = product.price / product.quantity;
+        const ingredientCost = unitCost * convertedQuantity;
+        totalCost += ingredientCost;
 
-            <!-- Exemplo de Aplicativo 2: Dashboards -->
-            <a href="https://dashboards-pefp.vercel.app/" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-red-50 hover:shadow-md transition-all duration-300">
-                <img src="https://placehold.co/100x100/FF0000/FFFFFF?text=Dashboards" alt="Ícone do Dashboards" class="w-24 h-24 rounded-full mb-2 shadow-sm">
-                <span class="text-lg font-medium text-gray-700">Dashboards</span>
-            </a>
+        calculationDetails.push({
+          ingredient: ingredient.name,
+          quantity: ingredient.quantity,
+          unit: ingredient.unit,
+          convertedQuantity,
+          unitCost,
+          cost: ingredientCost
+        });
+      }
+    }
 
-            <!-- Exemplo de Aplicativo 3: Barbearia -->
-            <a href="https://barbearia.streamlit.app/" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-blue-100 hover:shadow-md transition-all duration-300">
-                <img src="https://placehold.co/100x100/1877F2/FFFFFF?text=Barbearia" alt="Ícone do Barbearia" class="w-24 h-24 rounded-full mb-2 shadow-sm">
-                <span class="text-lg font-medium text-gray-700">Barbearia</span>
-            </a>
+    if (missingConversions.length > 0) {
+      setPendingConversions(missingConversions);
+      setShowConversionModal(true);
+      return;
+    }
 
-            <!-- Exemplo de Aplicativo 4: Contas -->
-            <a href="https://wyagami.github.io/contas/" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 hover:shadow-md transition-all duration-300">
-                <img src="https://placehold.co/100x100/000000/FFFFFF?text=Contas" alt="Ícone do Contas" class="w-24 h-24 rounded-full mb-2 shadow-sm">
-                <span class="text-lg font-medium text-gray-700">Contas</span>
-            </a>
+    const additionalCosts = parseFloat(recipeForm.additionalCosts || 0);
+    const profitMargin = parseFloat(recipeForm.profitMargin || 0);
 
-            <!-- Exemplo de Aplicativo 5: Beneficios -->
-            <a href="https://wpyagami.wixsite.com/beneficios" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-pink-50 hover:shadow-md transition-all duration-300">
-                <img src="https://placehold.co/100x100/E1306C/FFFFFF?text=Beneficios" alt="Ícone do Beneficios" class="w-24 h-24 rounded-full mb-2 shadow-sm">
-                <span class="text-lg font-medium text-gray-700">Beneficios</span>
-            </a>
+    const finalCost = totalCost + additionalCosts;
+    const sellingPrice = finalCost * (1 + profitMargin / 100);
+    const profitValue = sellingPrice - finalCost;
 
-            <!-- Exemplo de Aplicativo 6: Tabuada -->
-            <a href="https://wyagami.github.io/tabuada/" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-blue-50 hover:shadow-md transition-all duration-300">
-                <img src="https://placehold.co/100x100/0A66C2/FFFFFF?text=Tabuada" alt="Ícone do Tabuada" class="w-24 h-24 rounded-full mb-2 shadow-sm">
-                <span class="text-lg font-medium text-gray-700">Tabuada</span>
-            </a>
+    setCalculationResult({
+      recipeName: recipeForm.name,
+      ingredients: recipeForm.ingredients,
+      ingredientsCost: totalCost,
+      additionalCosts,
+      totalCost: finalCost,
+      profitMargin,
+      profitValue,
+      sellingPrice,
+      details: calculationDetails
+    });
+  };
 
-            <!-- Exemplo de Aplicativo 7: Idade -->
-            <a href="https://gemini.google.com/share/0ef58b1a1bbb" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 hover:shadow-md transition-all duration-300">
-                <img src="https://placehold.co/100x100/333333/FFFFFF?text=Idade" alt="Ícone do Idade" class="w-24 h-24 rounded-full mb-2 shadow-sm">
-                <span class="text-lg font-medium text-gray-700">Idade</span>
-            </a>
+  // Handle submission of a new conversion factor from the modal
+  const handleConversionSubmit = (conversion, factor) => {
+    const conversionKey = `${conversion.fromUnit}_to_${conversion.toUnit}`;
+    setConversions(prev => ({
+      ...prev,
+      [conversionKey]: parseFloat(factor)
+    }));
 
-            <!-- Exemplo de Aplicativo 8: Historias -->
-            <a href="https://app--story-weaver-ai-32bcdee2.base44.app" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-green-50 hover:shadow-md transition-all duration-300">
-                <img src="https://placehold.co/100x100/1DB954/FFFFFF?text=Historias" alt="Ícone do Historias" class="w-24 h-24 rounded-full mb-2 shadow-sm">
-                <span class="text-lg font-medium text-gray-700">Historias</span>
-            </a>
+    setPendingConversions(prev =>
+      prev.filter(p =>
+        !(p.ingredient === conversion.ingredient &&
+          p.fromUnit === conversion.fromUnit &&
+          p.toUnit === conversion.toUnit)
+      )
+    );
+  };
 
-            <!-- Exemplo de Aplicativo 9: Receitas -->
-            <a href="https://g.co/gemini/share/db1517cfbf9d" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-green-50 hover:shadow-md transition-all duration-300">
-                <img src="https://placehold.co/100x100/25D366/FFFFFF?text=Receitas" alt="Ícone do Receitas" class="w-24 h-24 rounded-full mb-2 shadow-sm">
-                <span class="text-lg font-medium text-gray-700">Receitas</span>
-            </a>
+  // Finish conversions and re-calculate recipe cost
+  const finishConversions = () => {
+    setShowConversionModal(false);
+    setPendingConversions([]);
+    calculateRecipeCost();
+  };
 
-            <!-- Exemplo de Aplicativo 10: Netflix -->
-            <a href="https://www.netflix.com" target="_blank" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-red-50 hover:shadow-md transition-all duration-300">
-                <img src="https://placehold.co/100x100/E50914/FFFFFF?text=Netflix" alt="Ícone da Netflix" class="w-24 h-24 rounded-full mb-2 shadow-sm">
-                <span class="text-lg font-medium text-gray-700">Netflix</span>
-            </a>
+  // Get all conversions (default and custom)
+  const getAllConversions = () => {
+    const allConversions = { ...defaultConversions, ...conversions };
+    return Object.entries(allConversions).map(([key, value]) => {
+      const [from, to] = key.split('_to_');
+      return { key, from, to, value, isDefault: defaultConversions[key] !== undefined };
+    });
+  };
+
+  // Update an existing conversion factor
+  const updateConversion = (key, newValue) => {
+    setConversions(prev => ({
+      ...prev,
+      [key]: parseFloat(newValue)
+    }));
+  };
+
+  // Delete a custom conversion
+  const deleteConversion = (key) => {
+    if (defaultConversions[key]) {
+      // Cannot delete default conversions
+      return;
+    }
+    setConversions(prev => {
+      const newConversions = { ...prev };
+      delete newConversions[key];
+      return newConversions;
+    });
+  };
+
+  // Export all application data to a JSON file
+  const exportData = () => {
+    const dataToExport = {
+      products: products,
+      conversions: conversions,
+      savedRecipes: savedRecipes,
+    };
+    const jsonString = JSON.stringify(dataToExport, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'calculadora_receitas_data.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setSuccessMessage('Dados exportados com sucesso!');
+    setShowSuccessMessage(true);
+  };
+
+  // Trigger the hidden file input click for import
+  const handleImportClick = () => {
+    fileInputRef.current.click();
+  };
+
+  // Handle file selection and import data from JSON
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const importedData = JSON.parse(e.target.result);
+          // Check if the imported data has the expected structure
+          if (importedData.products && importedData.conversions && importedData.savedRecipes) {
+            setProducts(importedData.products);
+            setConversions(importedData.conversions);
+            setSavedRecipes(importedData.savedRecipes);
+            setSuccessMessage('Dados importados com sucesso!');
+            setShowSuccessMessage(true);
+          } else {
+            setSuccessMessage('Formato de arquivo JSON inválido. Verifique se contém "products", "conversions" e "savedRecipes".');
+            setShowSuccessMessage(true);
+          }
+        } catch (error) {
+          setSuccessMessage('Erro ao ler o arquivo JSON. Certifique-se de que é um JSON válido.');
+          setShowSuccessMessage(true);
+          console.error('Error parsing JSON:', error);
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 p-4">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-4xl font-bold text-center mb-8 text-orange-800">
+          Calculadora de Custos de Receitas
+        </h1>
+
+        {/* Tabs */}
+        <div className="flex space-x-4 mb-6">
+          <button
+            onClick={() => setActiveTab('products')}
+            className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-colors ${
+              activeTab === 'products'
+                ? 'bg-orange-500 text-white'
+                : 'bg-white text-orange-600 hover:bg-orange-100'
+            }`}
+          >
+            <Package className="w-5 h-5" />
+            Produtos
+          </button>
+          <button
+            onClick={() => setActiveTab('calculator')}
+            className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-colors ${
+              activeTab === 'calculator'
+                ? 'bg-orange-500 text-white'
+                : 'bg-white text-orange-600 hover:bg-orange-100'
+            }`}
+          >
+            <Calculator className="w-5 h-5" />
+            Calculadora
+          </button>
+          <button
+            onClick={() => setActiveTab('conversions')}
+            className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-colors ${
+              activeTab === 'conversions'
+                ? 'bg-orange-500 text-white'
+                : 'bg-white text-orange-600 hover:bg-orange-100'
+            }`}
+          >
+            <Edit3 className="w-5 h-5" />
+            Conversões
+          </button>
+          <button
+            onClick={() => setActiveTab('saved-recipes')}
+            className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-colors ${
+              activeTab === 'saved-recipes'
+                ? 'bg-orange-500 text-white'
+                : 'bg-white text-orange-600 hover:bg-orange-100'
+            }`}
+          >
+            <Save className="w-5 h-5" />
+            Receitas Salvas
+          </button>
         </div>
 
-        <div class="mt-8 text-sm text-gray-500">
-            <p>
-                <strong>Nota:</strong> Para abrir aplicativos instalados no seu dispositivo (como Word, Excel, etc.), seria necessário um protocolo de URL personalizado (ex: <code>ms-word:</code>, <code>excel:</code>).
-                No entanto, navegadores web modernos têm restrições de segurança que impedem o uso direto desses protocolos por razões de privacidade e segurança.
-                Este exemplo demonstra a abertura de links para sites web.
-            </p>
-        </div>
+        {/* Produtos Tab */}
+        {activeTab === 'products' && (
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Cadastro de Produtos</h2>
+              <button
+                onClick={() => setShowProductForm(true)}
+                className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Novo Produto
+              </button>
+            </div>
+
+            {showProductForm && (
+              <div className="mb-6 p-4 bg-orange-50 rounded-lg">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <input
+                    type="text"
+                    placeholder="Nome do produto"
+                    value={productForm.name}
+                    onChange={(e) => setProductForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Preço (R$)"
+                    value={productForm.price}
+                    onChange={(e) => setProductForm(prev => ({ ...prev, price: e.target.value }))}
+                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Quantidade"
+                    value={productForm.quantity}
+                    onChange={(e) => setProductForm(prev => ({ ...prev, quantity: e.target.value }))}
+                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  />
+                  <select
+                    value={productForm.unit}
+                    onChange={(e) => setProductForm(prev => ({ ...prev, unit: e.target.value }))}
+                    className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                  >
+                    {units.map(unit => (
+                      <option key={unit} value={unit}>{unit}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={handleProductSubmit}
+                    disabled={!productForm.name || !productForm.price || !productForm.quantity}
+                    className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 flex items-center gap-2 disabled:bg-gray-400"
+                  >
+                    <Save className="w-4 h-4" />
+                    {editingProduct ? 'Atualizar' : 'Salvar'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowProductForm(false);
+                      setEditingProduct(null);
+                      setProductForm({ name: '', price: '', quantity: '', unit: 'kg' });
+                    }}
+                    className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 flex items-center gap-2"
+                  >
+                    <X className="w-4 h-4" />
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="overflow-x-auto">
+              <table className="w-full table-auto">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="px-4 py-2 text-left">Produto</th>
+                    <th className="px-4 py-2 text-left">Preço</th>
+                    <th className="px-4 py-2 text-left">Quantidade</th>
+                    <th className="px-4 py-2 text-left">Unidade</th>
+                    <th className="px-4 py-2 text-left">Preço/Unidade</th>
+                    <th className="px-4 py-2 text-left">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.map(product => (
+                    <tr key={product.id} className="border-b">
+                      <td className="px-4 py-2">{product.name}</td>
+                      <td className="px-4 py-2">R$ {product.price.toFixed(2)}</td>
+                      <td className="px-4 py-2">{product.quantity}</td>
+                      <td className="px-4 py-2">{product.unit}</td>
+                      <td className="px-4 py-2">R$ {(product.price / product.quantity).toFixed(4)}</td>
+                      <td className="px-4 py-2">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => editProduct(product)}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => deleteProduct(product.id)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Receitas Salvas Tab */}
+        {activeTab === 'saved-recipes' && (
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Receitas Salvas</h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={exportData}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Exportar Dados
+                </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept=".json"
+                  className="hidden"
+                />
+                <button
+                  onClick={handleImportClick}
+                  className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 flex items-center gap-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  Importar Dados
+                </button>
+              </div>
+            </div>
+
+            {savedRecipes.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>Nenhuma receita salva ainda.</p>
+                <p className="text-sm mt-2">Calcule uma receita e clique em "Salvar Receita" para salvá-la aqui.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {savedRecipes.map(recipe => (
+                  <div key={recipe.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="text-lg font-semibold text-gray-800">{recipe.name}</h3>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => loadRecipe(recipe)}
+                          className="text-blue-600 hover:text-blue-800 text-sm"
+                          title="Carregar receita"
+                        >
+                          Carregar
+                        </button>
+                        <button
+                          onClick={() => confirmDeleteRecipe(recipe.id)} // Use confirmDeleteRecipe
+                          className="text-red-600 hover:text-red-800"
+                          title="Deletar receita"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="text-sm text-gray-600 mb-3">
+                      <p>Criada em: {recipe.createdAt}</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                      <div className="bg-blue-50 p-2 rounded">
+                        <p className="text-blue-600 font-medium">Custo Total</p>
+                        <p className="text-blue-800 font-bold">R$ {recipe.totalCost.toFixed(2)}</p>
+                      </div>
+                      <div className="bg-green-50 p-2 rounded">
+                        <p className="text-green-600 font-medium">Preço de Venda</p>
+                        <p className="text-green-800 font-bold">R$ {recipe.sellingPrice.toFixed(2)}</p>
+                      </div>
+                      <div className="bg-yellow-50 p-2 rounded">
+                        <p className="text-yellow-600 font-medium">Margem (%)</p>
+                        <p className="text-yellow-800 font-bold">{recipe.profitMargin}%</p>
+                      </div>
+                      <div className="bg-purple-50 p-2 rounded">
+                        <p className="text-purple-600 font-medium">Lucro</p>
+                        <p className="text-purple-800 font-bold">R$ {recipe.profitValue.toFixed(2)}</p>
+                      </div>
+                    </div>
+
+                    <details className="text-sm">
+                      <summary className="cursor-pointer text-gray-600 hover:text-gray-800">
+                        Ver ingredientes
+                      </summary>
+                      <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                        {recipe.ingredients.split('\n').map((ingredient, idx) => (
+                          <p key={idx} className="mb-1">{ingredient}</p>
+                        ))}
+                      </div>
+                    </details>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Conversões Tab */}
+        {activeTab === 'conversions' && (
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800">Gerenciar Conversões de Unidades</h2>
+            </div>
+
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-700">
+                <strong>Conversões:</strong> Aqui você pode visualizar e editar todas as conversões de unidades.
+                As conversões padrão (em azul) não podem ser deletadas, mas podem ser editadas.
+                As conversões personalizadas podem ser editadas ou removidas.
+              </p>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full table-auto">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="px-4 py-2 text-left">De</th>
+                    <th className="px-4 py-2 text-left">Para</th>
+                    <th className="px-4 py-2 text-left">Fator de Conversão</th>
+                    <th className="px-4 py-2 text-left">Tipo</th>
+                    <th className="px-4 py-2 text-left">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getAllConversions().map(conversion => (
+                    <tr key={conversion.key} className="border-b">
+                      <td className="px-4 py-2">{conversion.from}</td>
+                      <td className="px-4 py-2">{conversion.to}</td>
+                      <td className="px-4 py-2">
+                        {editingConversion === conversion.key ? (
+                          <input
+                            type="number"
+                            step="0.001"
+                            defaultValue={conversion.value}
+                            className="w-24 px-2 py-1 border rounded"
+                            onBlur={(e) => {
+                              updateConversion(conversion.key, e.target.value);
+                              setEditingConversion(null);
+                            }}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                updateConversion(conversion.key, e.target.value);
+                                setEditingConversion(null);
+                              }
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <span>{conversion.value}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          conversion.isDefault
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-green-100 text-green-800'
+                        }`}>
+                          {conversion.isDefault ? 'Padrão' : 'Personalizada'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setEditingConversion(conversion.key)}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="Editar conversão"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          {!conversion.isDefault && (
+                            <button
+                              onClick={() => deleteConversion(conversion.key)}
+                              className="text-red-600 hover:text-red-800"
+                              title="Deletar conversão"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <h3 className="font-semibold mb-2">Exemplos de uso:</h3>
+              <ul className="text-sm text-gray-700 space-y-1">
+                <li>• 1 copo = 200 ml (padrão)</li>
+                <li>• 1 xícara = 240 ml (padrão)</li>
+                <li>• 1 colher de sopa = 15 ml (padrão)</li>
+                <li>• 1 g = 0.001 kg (padrão)</li>
+                <li>• Conversões personalizadas aparecem quando você as define durante o cálculo</li>
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Calculadora Tab */}
+        {activeTab === 'calculator' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="text-2xl font-bold text-gray-800 mb-6">Calcular Custo da Receita</h2>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nome da Receita
+                  </label>
+                  <input
+                    type="text"
+                    value={recipeForm.name}
+                    onChange={(e) => setRecipeForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    placeholder="Ex: Bolo de Chocolate"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Margem de Lucro (%)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={recipeForm.profitMargin}
+                    onChange={(e) => setRecipeForm(prev => ({ ...prev, profitMargin: e.target.value }))}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    placeholder="Ex: 30"
+                  />
+                </div>
+
+                <div className="lg:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ingredientes da Receita
+                  </label>
+                  <textarea
+                    value={recipeForm.ingredients}
+                    onChange={(e) => setRecipeForm(prev => ({ ...prev, ingredients: e.target.value }))}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 h-32"
+                    placeholder="Ex:
+2 xícaras de farinha de trigo
+1 xícara de açúcar
+3 ovos
+200 ml de leite
+100 g de chocolate em pó"
+                  />
+                  <p className="text-sm text-gray-600 mt-1">
+                    Digite cada ingrediente em uma linha no formato: quantidade + unidade + nome do ingrediente
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Custos Adicionais (R$)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={recipeForm.additionalCosts}
+                    onChange={(e) => setRecipeForm(prev => ({ ...prev, additionalCosts: e.target.value }))}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    placeholder="Ex: 5.00 (gás, energia, embalagem)"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={calculateRecipeCost}
+                className="mt-6 w-full bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 flex items-center justify-center gap-2 font-semibold"
+              >
+                <Calculator className="w-5 h-5" />
+                Calcular Custo
+              </button>
+            </div>
+
+            {/* Resultado do Cálculo */}
+            {calculationResult && (
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">Resultado do Cálculo</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <p className="text-sm text-blue-600 mb-1">Custo dos Ingredientes</p>
+                    <p className="text-xl font-bold text-blue-800">
+                      R$ {calculationResult.ingredientsCost.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="bg-yellow-50 p-4 rounded-lg">
+                    <p className="text-sm text-yellow-600 mb-1">Custos Adicionais</p>
+                    <p className="text-xl font-bold text-yellow-800">
+                      R$ {calculationResult.additionalCosts.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="bg-red-50 p-4 rounded-lg">
+                    <p className="text-sm text-red-600 mb-1">Custo Total</p>
+                    <p className="text-xl font-bold text-red-800">
+                      R$ {calculationResult.totalCost.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="bg-purple-50 p-4 rounded-lg">
+                    <p className="text-sm text-purple-600 mb-1">Lucro</p>
+                    <p className="text-xl font-bold text-purple-800">
+                      R$ {calculationResult.profitValue.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <p className="text-sm text-green-600 mb-1">Preço de Venda</p>
+                    <p className="text-xl font-bold text-green-800">
+                      R$ {calculationResult.sellingPrice.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end mb-4">
+                  <button
+                    onClick={() => setShowSaveModal(true)}
+                    className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 flex items-center gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    Salvar Receita
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <h4 className="font-semibold mb-2">Detalhamento por Ingrediente:</h4>
+                  <table className="w-full table-auto text-sm">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="px-3 py-2 text-left">Ingrediente</th>
+                        <th className="px-3 py-2 text-left">Quantidade</th>
+                        <th className="px-3 py-2 text-left">Preço/Unidade</th>
+                        <th className="px-3 py-2 text-left">Custo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {calculationResult.details.map((detail, index) => (
+                        <tr key={index} className="border-b">
+                          <td className="px-3 py-2">{detail.ingredient}</td>
+                          <td className="px-3 py-2">
+                            {detail.quantity} {detail.unit}
+                            {detail.convertedQuantity !== detail.quantity && (
+                              <span className="text-gray-500 text-xs">
+                                {' '}(≈ {detail.convertedQuantity.toFixed(3)})
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2">R$ {detail.unitCost.toFixed(4)}</td>
+                          <td className="px-3 py-2">R$ {detail.cost.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Modal de Salvar Receita */}
+        {showSaveModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl max-w-md w-full p-6">
+              <h3 className="text-lg font-bold mb-4">Salvar Receita</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Deseja salvar a receita "{calculationResult?.recipeName || 'Sem nome'}" com todos os custos calculados?
+              </p>
+
+              <div className="bg-gray-50 p-3 rounded-lg mb-4 text-sm">
+                <p><strong>Custo Total:</strong> R$ {calculationResult?.totalCost.toFixed(2)}</p>
+                <p><strong>Preço de Venda:</strong> R$ {calculationResult?.sellingPrice.toFixed(2)}</p>
+                <p><strong>Lucro:</strong> R$ {calculationResult?.profitValue.toFixed(2)}</p>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={saveRecipe}
+                  className="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
+                >
+                  Salvar
+                </button>
+                <button
+                  onClick={() => setShowSaveModal(false)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Confirmação de Exclusão */}
+        {showDeleteConfirmModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl max-w-md w-full p-6">
+              <h3 className="text-lg font-bold mb-4">Confirmar Exclusão</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Tem certeza que deseja deletar esta receita? Esta ação não pode ser desfeita.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={deleteRecipe}
+                  className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
+                >
+                  Deletar
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirmModal(false);
+                    setRecipeToDelete(null);
+                  }}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Mensagem de Sucesso/Erro */}
+        {showSuccessMessage && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl max-w-md w-full p-6 text-center">
+              <h3 className="text-lg font-bold mb-4">Notificação</h3>
+              <p className="text-sm text-gray-700 mb-4">{successMessage}</p>
+              <button
+                onClick={() => setShowSuccessMessage(false)}
+                className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Conversões */}
+        {showConversionModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl max-w-md w-full p-6">
+              <h3 className="text-lg font-bold mb-4">Conversões Necessárias</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Preciso saber como converter as seguintes unidades:
+              </p>
+
+              {pendingConversions.map((conversion, index) => (
+                <div key={index} className="mb-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm mb-2">
+                    <strong>{conversion.ingredient}</strong>: {conversion.quantity} {conversion.fromUnit} para {conversion.toUnit}
+                  </p>
+                  <div className="flex gap-2">
+                    <span className="text-sm">1 {conversion.fromUnit} = </span>
+                    <input
+                      type="number"
+                      step="0.001"
+                      placeholder="fator"
+                      className="flex-1 px-2 py-1 border rounded text-sm"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          handleConversionSubmit(conversion, e.target.value);
+                        }
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value) {
+                          handleConversionSubmit(conversion, e.target.value);
+                        }
+                      }}
+                    />
+                    <span className="text-sm">{conversion.toUnit}</span>
+                  </div>
+                </div>
+              ))}
+
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={finishConversions}
+                  className="flex-1 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600"
+                  disabled={pendingConversions.length > 0}
+                >
+                  Continuar Cálculo
+                </button>
+                <button
+                  onClick={() => setShowConversionModal(false)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
-</body>
-</html>
+  );
+};
+
+export default RecipeCostCalculator;
