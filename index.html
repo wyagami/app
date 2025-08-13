@@ -3,79 +3,577 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lançador de Aplicativos</title>
-    <!-- Inclui Tailwind CSS para estilização fácil e responsiva -->
+    <title>English Learning App</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Define a fonte Inter para todo o corpo do documento */
         body {
             font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         }
-        /* Estilos personalizados para os ícones */
-        .app-icon {
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
         }
-        .app-icon:hover {
-            transform: translateY(-5px); /* Efeito de elevação ao passar o mouse */
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2); /* Sombra mais pronunciada */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .btn {
+            @apply w-full sm:w-auto text-white font-semibold py-3 px-5 rounded-xl shadow-lg transform hover:-translate-y-1 transition-all duration-300 ease-in-out flex items-center justify-center gap-2;
+        }
+        .btn-icon {
+            @apply w-5 h-5;
+        }
+        .btn-primary {
+            @apply bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700;
+        }
+        .btn-secondary {
+            @apply bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700;
+        }
+        .btn-tertiary {
+            @apply bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700;
+        }
+        .btn-disabled {
+            @apply bg-gray-400 cursor-not-allowed hover:bg-gray-400 shadow-none transform-none;
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
-    <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-4xl">
-        <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Meus Aplicativos</h1>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-2xl mx-auto bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-6 sm:p-8">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800">Aprenda Inglês com Imagens</h1>
+            <p class="text-gray-600 mt-2">Gere um objeto, revele seu nome e explore situações de uso.</p>
+        </header>
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 justify-items-center">
-            <!-- Ícone do Aplicativo 1 -->
-            <a href="https://g.co/gemini/share/9d77830e9aaa" target="_blank" class="app-icon flex flex-col items-center justify-center p-4 bg-blue-500 text-white rounded-2xl shadow-md cursor-pointer hover:bg-blue-600 w-32 h-32 text-center transform hover:scale-105">
-                <span class="text-lg font-semibold">Receitas</span>
-            </a>
+        <main>
+            <!-- Image Container -->
+            <div id="image-container" class="w-full h-64 sm:h-80 bg-gray-200 rounded-xl flex items-center justify-center mb-6 overflow-hidden border-4 border-white shadow-inner">
+                <div id="image-loader" class="loader !border-gray-400 !border-t-gray-600 hidden"></div>
+                <img id="generated-image" src="" class="hidden w-full h-full object-contain" alt="Objeto gerado por IA">
+                <p id="image-placeholder" class="text-gray-500">Clique em "Gerar Novo Objeto"</p>
+            </div>
 
-            <!-- Ícone do Aplicativo 2 -->
-            <a href="https://wyagami.github.io/compras/" target="_blank" class="app-icon flex flex-col items-center justify-center p-4 bg-red-500 text-white rounded-2xl shadow-md cursor-pointer hover:bg-red-600 w-32 h-32 text-center transform hover:scale-105">
-                <span class="text-lg font-semibold">Compras</span>
-            </a>
+            <!-- Main Controls -->
+            <div class="flex flex-col sm:flex-row justify-center gap-4 mb-6">
+                <button id="generate-btn" class="btn btn-primary">
+                    <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.664 0l3.18-3.185m-7.528 0l-3.182-3.182a8.25 8.25 0 0111.664 0l3.18 3.185" /></svg>
+                    <span>Gerar Novo Objeto</span>
+                </button>
+                <button id="reveal-name-btn" class="btn btn-secondary btn-disabled" disabled>
+                    <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    <span>Revelar Nome</span>
+                </button>
+            </div>
 
-            <!-- Ícone do Aplicativo 3 -->
-            <a href="https://wyagami.github.io/contas/" target="_blank" class="app-icon flex flex-col items-center justify-center p-4 bg-gray-700 text-white rounded-2xl shadow-md cursor-pointer hover:bg-gray-800 w-32 h-32 text-center transform hover:scale-105">
-                <span class="text-lg font-semibold">Contas</span>
-            </a>
+            <!-- Object Name & Translation -->
+            <div id="object-info" class="text-center mb-6 min-h-[80px] flex flex-col justify-center items-center">
+                 <div id="name-loader" class="loader !border-gray-400 !border-t-gray-600 hidden"></div>
+                <p id="object-name" class="text-3xl font-bold text-gray-900"></p>
+                <p id="object-translation" class="text-xl text-gray-500"></p>
+            </div>
+            
+            <!-- Situation Section -->
+            <div class="bg-gray-50 p-4 rounded-lg shadow-sm mb-6">
+                <h2 class="text-xl font-semibold text-gray-800 mb-3 text-center">Situação Gerada</h2>
+                <div class="flex flex-wrap justify-center gap-3 mb-4">
+                     <button id="generate-situation-btn" class="btn btn-primary btn-disabled" disabled>
+                        <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" /></svg>
+                        <span>Gerar Situação</span>
+                     </button>
+                     <button id="translate-situation-btn" class="btn btn-tertiary btn-disabled" disabled>
+                        <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 21l5.25-11.625M21 21l-5.25-11.625M3.75 5.25h16.5M4.5 19.5h15" /></svg>
+                        <span>Traduzir Situação</span>
+                     </button>
+                     <button id="speak-name-btn" class="btn btn-secondary btn-disabled" disabled>
+                        <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" /></svg>
+                        <span>Ouvir Nome</span>
+                     </button>
+                     <button id="speak-situation-btn" class="btn btn-secondary btn-disabled" disabled>
+                        <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" /></svg>
+                        <span>Ouvir Situação</span>
+                     </button>
+                </div>
+                <div id="situation-container" class="w-full min-h-[120px] bg-white rounded-md p-4 text-gray-700 border flex flex-col justify-center">
+                     <div id="situation-loader" class="loader !border-gray-400 !border-t-gray-600 hidden mx-auto"></div>
+                    <p id="situation-text" class="text-center text-lg"></p>
+                    <p id="situation-translation" class="text-center text-blue-700 mt-2 font-semibold text-lg"></p>
+                </div>
+            </div>
 
-            <!-- Ícone do Aplicativo 4 -->
-            <a href="https://g.co/gemini/share/0ef58b1a1bbb" target="_blank" class="app-icon flex flex-col items-center justify-center p-4 bg-green-500 text-white rounded-2xl shadow-md cursor-pointer hover:bg-green-600 w-32 h-32 text-center transform hover:scale-105">
-                <span class="text-lg font-semibold">Idade</span>
-            </a>
+            <!-- Custom Situation Section -->
+            <div class="bg-gray-50 p-4 rounded-lg shadow-sm">
+                <h2 class="text-xl font-semibold text-gray-800 mb-3 text-center">Sua Própria Situação (Português)</h2>
+                <textarea id="custom-situation-input" class="w-full p-3 border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3" placeholder="Escreva sua situação em português aqui..."></textarea>
+                <div class="flex flex-wrap justify-center gap-3 mb-4">
+                     <button id="translate-custom-situation-btn" class="btn btn-tertiary">
+                        <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 21l5.25-11.625M21 21l-5.25-11.625M3.75 5.25h16.5M4.5 19.5h15" /></svg>
+                        <span>Traduzir p/ Inglês</span>
+                     </button>
+                     <button id="speak-custom-situation-btn" class="btn btn-secondary btn-disabled" disabled>
+                        <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" /></svg>
+                        <span>Ouvir em Inglês</span>
+                     </button>
+                </div>
+                <div id="custom-situation-output" class="w-full min-h-[80px] bg-white rounded-md p-4 text-gray-700 border flex flex-col justify-center">
+                    <div id="custom-situation-loader" class="loader !border-gray-400 !border-t-gray-600 hidden mx-auto"></div>
+                    <p id="custom-situation-english" class="text-center text-lg"></p>
+                </div>
+            </div>
 
-            <!-- Ícone do Aplicativo 5 -->
-            <a href="https://chat.z.ai/space/u04d5616q561-art" target="_blank" class="app-icon flex flex-col items-center justify-center p-4 bg-purple-500 text-white rounded-2xl shadow-md cursor-pointer hover:bg-purple-600 w-32 h-32 text-center transform hover:scale-105">
-                <span class="text-lg font-semibold">Rede Neural</span>
-            </a>
+        </main>
+        
+        <audio id="audio-player" class="hidden"></audio>
 
-            <!-- Ícone do Aplicativo 6 -->
-            <a href="https://g.co/gemini/share/f405dafc158b" target="_blank" class="app-icon flex flex-col items-center justify-center p-4 bg-indigo-500 text-white rounded-2xl shadow-md cursor-pointer hover:bg-indigo-600 w-32 h-32 text-center transform hover:scale-105">
-                <span class="text-lg font-semibold">Texto para Audio</span>
-            </a>
-
-            <!-- Ícone do Aplicativo 7 -->
-            <a href="https://chat.z.ai/space/r0vd96e34at0-art" target="_blank" class="app-icon flex flex-col items-center justify-center p-4 bg-orange-500 text-white rounded-2xl shadow-md cursor-pointer hover:bg-orange-600 w-32 h-32 text-center transform hover:scale-105">
-                <span class="text-lg font-semibold">Otimizador de Peças</span>
-            </a>
-
-            <!-- Ícone do Aplicativo 8 -->
-            <a href="https://chat.z.ai/space/c0cdc6j1u100-art" target="_blank" class="app-icon flex flex-col items-center justify-center p-4 bg-teal-500 text-white rounded-2xl shadow-md cursor-pointer hover:bg-teal-600 w-32 h-32 text-center transform hover:scale-105">
-                <span class="text-lg font-semibold">OCR</span>
-            </a>
-
-            <!-- Ícone do Aplicativo 9 -->
-            <a href="https://g.co/gemini/share/532d065a2fdd" target="_blank" class="app-icon flex flex-col items-center justify-center p-4 bg-lime-500 text-white rounded-2xl shadow-md cursor-pointer hover:bg-lime-600 w-32 h-32 text-center transform hover:scale-105">
-                <span class="text-lg font-semibold">Perguntas e Respostas</span>
-            </a>
-
-            <!-- Ícone do Aplicativo 10 -->
-            <a href="https://www.trello.com" target="_blank" class="app-icon flex flex-col items-center justify-center p-4 bg-cyan-500 text-white rounded-2xl shadow-md cursor-pointer hover:bg-cyan-600 w-32 h-32 text-center transform hover:scale-105">
-                <span class="text-lg font-semibold">Tarefas</span>
-            </a>
-        </div>
+        <footer class="text-center text-gray-500 text-xs mt-8">
+            <p>Desenvolvido com a API do Google Gemini.</p>
+        </footer>
     </div>
+
+    <script>
+        // --- Element References ---
+        const generateBtn = document.getElementById('generate-btn');
+        const revealNameBtn = document.getElementById('reveal-name-btn');
+        const speakNameBtn = document.getElementById('speak-name-btn');
+        const generateSituationBtn = document.getElementById('generate-situation-btn');
+        const speakSituationBtn = document.getElementById('speak-situation-btn');
+        const translateSituationBtn = document.getElementById('translate-situation-btn');
+        
+        const generatedImage = document.getElementById('generated-image');
+        const imageLoader = document.getElementById('image-loader');
+        const imagePlaceholder = document.getElementById('image-placeholder');
+        const nameLoader = document.getElementById('name-loader');
+        
+        const objectNameEl = document.getElementById('object-name');
+        const objectTranslationEl = document.getElementById('object-translation');
+        
+        const situationLoader = document.getElementById('situation-loader');
+        const situationTextEl = document.getElementById('situation-text');
+        const situationTranslationEl = document.getElementById('situation-translation');
+
+        // New elements for custom situation
+        const customSituationInput = document.getElementById('custom-situation-input');
+        const translateCustomSituationBtn = document.getElementById('translate-custom-situation-btn');
+        const speakCustomSituationBtn = document.getElementById('speak-custom-situation-btn');
+        const customSituationEnglishEl = document.getElementById('custom-situation-english');
+        const customSituationLoader = document.getElementById('custom-situation-loader');
+        
+        const audioPlayer = document.getElementById('audio-player');
+
+        // --- State ---
+        let currentImageBase64 = '';
+        let currentObjectName = '';
+        let currentSituation = ''; // AI generated English situation
+        let currentUserSituationPt = ''; // User-provided Portuguese situation
+        let currentUserSituationEn = ''; // English translation of user-provided situation
+        let isProcessing = false;
+
+        // --- API Configuration ---
+        const API_KEY = ""; // Leave empty
+        const IMAGE_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`;
+        const TEXT_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
+        const TTS_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${API_KEY}`;
+
+        // --- Helper Functions ---
+        function setProcessingState(processing, button) {
+            isProcessing = processing;
+            // Update the specific button's loader and text if provided
+            if (button) {
+                const loader = button.querySelector('.loader');
+                const text = button.querySelector('span');
+                if (processing) {
+                    if (!loader) {
+                        const newLoader = document.createElement('div');
+                        newLoader.className = 'loader';
+                        // Insert before the text if text exists, otherwise append
+                        if (text) {
+                            button.insertBefore(newLoader, text);
+                        } else {
+                            button.appendChild(newLoader);
+                        }
+                    }
+                    if (text) text.style.display = 'none';
+                } else {
+                    if (loader) loader.remove();
+                    if (text) text.style.display = 'inline';
+                }
+            }
+            // Also update the general UI loaders if they are not associated with a specific button
+            imageLoader.style.display = (isProcessing && button !== generateBtn) ? 'block' : 'none';
+            nameLoader.style.display = (isProcessing && button !== revealNameBtn) ? 'block' : 'none';
+            situationLoader.style.display = (isProcessing && button !== generateSituationBtn && button !== translateSituationBtn) ? 'block' : 'none';
+            customSituationLoader.style.display = (isProcessing && button !== translateCustomSituationBtn && button !== speakCustomSituationBtn) ? 'block' : 'none';
+
+            updateButtonStates();
+        }
+        
+        function updateButtonStates() {
+            // All buttons affected by global processing state
+            const allButtons = [
+                generateBtn, revealNameBtn, speakNameBtn, generateSituationBtn, 
+                speakSituationBtn, translateSituationBtn, translateCustomSituationBtn, 
+                speakCustomSituationBtn
+            ];
+            
+            if (isProcessing) {
+                allButtons.forEach(btn => {
+                    btn.disabled = true;
+                    btn.classList.add('btn-disabled');
+                });
+                return;
+            }
+
+            // Enable/disable based on individual conditions
+            generateBtn.disabled = false;
+            generateBtn.classList.remove('btn-disabled');
+
+            revealNameBtn.disabled = !currentImageBase64;
+            revealNameBtn.classList.toggle('btn-disabled', !currentImageBase64);
+
+            speakNameBtn.disabled = !currentObjectName;
+            speakNameBtn.classList.toggle('btn-disabled', !currentObjectName);
+
+            generateSituationBtn.disabled = !currentObjectName;
+            generateSituationBtn.classList.toggle('btn-disabled', !currentObjectName);
+
+            speakSituationBtn.disabled = !currentSituation;
+            speakSituationBtn.classList.toggle('btn-disabled', !currentSituation);
+
+            translateSituationBtn.disabled = !currentSituation;
+            translateSituationBtn.classList.toggle('btn-disabled', !currentSituation);
+
+            // New custom situation buttons
+            translateCustomSituationBtn.disabled = !customSituationInput.value.trim();
+            translateCustomSituationBtn.classList.toggle('btn-disabled', !customSituationInput.value.trim());
+
+            speakCustomSituationBtn.disabled = !currentUserSituationEn;
+            speakCustomSituationBtn.classList.toggle('btn-disabled', !currentUserSituationEn);
+        }
+
+        async function fetchWithRetry(url, options, maxRetries = 3) {
+            let attempt = 0;
+            while (attempt < maxRetries) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return await response.json();
+                } catch (error) {
+                    console.error(`Attempt ${attempt + 1} failed:`, error);
+                    attempt++;
+                    if (attempt >= maxRetries) throw error;
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+                }
+            }
+        }
+
+        function alertUser(message) {
+            // Using existing display areas for alerts, or create a modal if preferred
+            // For now, let's use the situation text elements for general errors
+            situationTextEl.textContent = `Erro: ${message}`;
+            situationTextEl.classList.add('text-red-500');
+            // Clear after a few seconds
+            setTimeout(() => {
+                if (situationTextEl.textContent.startsWith('Erro:')) {
+                    situationTextEl.textContent = '';
+                    situationTextEl.classList.remove('text-red-500');
+                }
+            }, 5000);
+        }
+
+        // --- Audio Processing ---
+        function base64ToArrayBuffer(base64) {
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function pcmToWav(pcmData, sampleRate) {
+            const numChannels = 1, bitsPerSample = 16;
+            const blockAlign = numChannels * bitsPerSample / 8;
+            const byteRate = sampleRate * blockAlign;
+            const dataSize = pcmData.length * pcmData.BYTES_PER_ELEMENT;
+            const buffer = new ArrayBuffer(44 + dataSize);
+            const view = new DataView(buffer);
+
+            const writeString = (view, offset, string) => {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            };
+
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + dataSize, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitsPerSample, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, dataSize, true);
+            new Int16Array(buffer, 44).set(pcmData);
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+        
+        // --- API Call Functions ---
+        async function generateImage() {
+            const objectCategories = ["a piece of fruit", "a vegetable", "a kitchen utensil", "an office supply", "a piece of furniture", "a clothing item", "an electronic device", "a toy", "a tool", "a musical instrument", "a type of food", "a vehicle", "an animal", "a piece of jewelry", "a sports equipment"];
+            const randomCategory = objectCategories[Math.floor(Math.random() * objectCategories.length)];
+            const dynamicPrompt = `A photorealistic image of a single, common, everyday object that is ${randomCategory}. The object should be on a clean, plain white background and be clearly identifiable.`;
+
+            const payload = { instances: [{ prompt: dynamicPrompt }], parameters: { "sampleCount": 1 } };
+            try {
+                const result = await fetchWithRetry(IMAGE_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                return result?.predictions?.[0]?.bytesBase64Encoded || null;
+            } catch (error) {
+                console.error("Error generating image:", error);
+                alertUser("Não foi possível gerar a imagem.");
+                return null;
+            }
+        }
+
+        async function generateText(contents, targetLanguage = null) {
+            const payload = { contents: contents };
+            // If a targetLanguage is specified, adjust the prompt for translation
+            if (targetLanguage) {
+                payload.generationConfig = {
+                    responseMimeType: "text/plain" // Ensure plain text response
+                };
+            }
+            try {
+                const result = await fetchWithRetry(TEXT_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                return result?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || null;
+            } catch (error) {
+                console.error("Error generating text:", error);
+                alertUser("Erro de comunicação com a IA.");
+                return null;
+            }
+        }
+
+        async function generateAudio(textToSpeak, voiceName = "Puck") {
+            const payload = {
+                contents: [{ parts: [{ text: textToSpeak }] }],
+                generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceName } } } },
+                model: "gemini-2.5-flash-preview-tts"
+            };
+            try {
+                const result = await fetchWithRetry(TTS_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                if (part?.inlineData?.mimeType.startsWith("audio/")) return part.inlineData;
+                return null;
+            } catch (error) {
+                console.error("Error generating audio:", error);
+                alertUser("Não foi possível gerar o áudio.");
+                return null;
+            }
+        }
+
+        // --- Main Logic Functions ---
+        function resetUI() {
+            imageLoader.style.display = 'none'; // Ensure it's hidden on reset
+            imagePlaceholder.style.display = 'block';
+            generatedImage.classList.add('hidden');
+            objectNameEl.textContent = '';
+            objectTranslationEl.textContent = '';
+            situationTextEl.textContent = 'Gere um objeto para começar.';
+            situationTranslationEl.textContent = '';
+            customSituationInput.value = '';
+            customSituationEnglishEl.textContent = '';
+            customSituationLoader.style.display = 'none';
+
+            currentImageBase64 = '';
+            currentObjectName = '';
+            currentSituation = '';
+            currentUserSituationPt = '';
+            currentUserSituationEn = '';
+            updateButtonStates(); // Update states after clearing
+        }
+
+        async function handleGenerateNewObject() {
+            if (isProcessing) return;
+            setProcessingState(true, generateBtn);
+            resetUI(); // Reset UI before starting new generation
+            imageLoader.style.display = 'block';
+            imagePlaceholder.style.display = 'none';
+            generatedImage.classList.add('hidden');
+            
+            const base64 = await generateImage();
+            if (base64) {
+                currentImageBase64 = base64;
+                generatedImage.src = `data:image/png;base64,${currentImageBase64}`;
+                generatedImage.classList.remove('hidden');
+                imagePlaceholder.style.display = 'none'; // Hide placeholder if image loads
+            } else {
+                 imagePlaceholder.style.display = 'block'; // Show placeholder if image fails
+            }
+            
+            imageLoader.style.display = 'none';
+            setProcessingState(false, generateBtn);
+        }
+
+        async function handleRevealName() {
+            if (isProcessing || !currentImageBase64) return;
+            setProcessingState(true, revealNameBtn);
+            nameLoader.style.display = 'block';
+            objectNameEl.textContent = '';
+            objectTranslationEl.textContent = '';
+            currentObjectName = ''; // Clear previous name
+
+            const identifyContents = [{ role: "user", parts: [{ text: "What is the name of the object in this image? Respond with only the name in English, in singular form. For example: 'apple', 'car', 'book'." }, { inlineData: { mimeType: "image/png", data: currentImageBase64 } }] }];
+            const name = await generateText(identifyContents);
+            if (!name) {
+                alertUser("Não foi possível identificar o objeto.");
+                nameLoader.style.display = 'none';
+                setProcessingState(false, revealNameBtn);
+                return;
+            }
+            currentObjectName = name.charAt(0).toUpperCase() + name.slice(1);
+            objectNameEl.textContent = currentObjectName;
+
+            const translateContents = [{ role: "user", parts: [{ text: `Translate "${currentObjectName}" to Brazilian Portuguese. Respond with only the translation.` }] }];
+            const translation = await generateText(translateContents);
+            if (translation) {
+                objectTranslationEl.textContent = translation;
+            }
+
+            nameLoader.style.display = 'none';
+            setProcessingState(false, revealNameBtn);
+        }
+
+        async function handleGenerateSituation() {
+            if (isProcessing || !currentObjectName) return;
+            setProcessingState(true, generateSituationBtn);
+            situationLoader.style.display = 'block';
+            situationTextEl.textContent = '';
+            situationTranslationEl.textContent = '';
+            currentSituation = '';
+
+            const prompt = `Write a simple, short English sentence using the object "${currentObjectName}". The sentence should be easy for a beginner to understand.`;
+            const situation = await generateText([{ role: "user", parts: [{ text: prompt }] }]);
+
+            if (situation) {
+                currentSituation = situation;
+                situationTextEl.textContent = `"${situation}"`;
+            } else {
+                situationTextEl.textContent = 'Não foi possível gerar uma situação.';
+            }
+            
+            situationLoader.style.display = 'none';
+            setProcessingState(false, generateSituationBtn);
+        }
+
+        async function handleTranslateSituation() {
+            if (isProcessing || !currentSituation) return;
+            setProcessingState(true, translateSituationBtn);
+            situationTranslationEl.textContent = 'Traduzindo...';
+
+            // Only translate, no summarization
+            const translatePrompt = `Translate the following sentence to Brazilian Portuguese, respond with only the translation and nothing else: "${currentSituation}"`;
+            const translation = await generateText([{ role: "user", parts: [{ text: translatePrompt }] }]);
+
+            if (translation) {
+                situationTranslationEl.textContent = translation;
+            } else {
+                situationTranslationEl.textContent = 'Falha na tradução.';
+            }
+            setProcessingState(false, translateSituationBtn);
+        }
+
+        // New function to handle custom situation translation
+        async function handleCustomTranslateSituation() {
+            const inputPt = customSituationInput.value.trim();
+            if (isProcessing || !inputPt) {
+                alertUser("Por favor, digite uma situação em português.");
+                return;
+            }
+            setProcessingState(true, translateCustomSituationBtn);
+            customSituationLoader.style.display = 'block';
+            customSituationEnglishEl.textContent = '';
+            currentUserSituationEn = ''; // Clear previous translation
+
+            const translatePrompt = `Translate the following Portuguese sentence to English. Respond with only the English translation and nothing else: "${inputPt}"`;
+            const translationEn = await generateText([{ role: "user", parts: [{ text: translatePrompt }] }]);
+
+            if (translationEn) {
+                currentUserSituationEn = translationEn;
+                customSituationEnglishEl.textContent = `"${translationEn}"`;
+            } else {
+                customSituationEnglishEl.textContent = 'Falha na tradução para o inglês.';
+            }
+            customSituationLoader.style.display = 'none';
+            setProcessingState(false, translateCustomSituationBtn);
+        }
+
+        async function playAudioForText(text) {
+            if (isProcessing || !text) return;
+            setProcessingState(true); // General processing state, no specific button
+
+            // Determine which button triggered this for correct loader display
+            let triggeringButton = null;
+            if (text === currentObjectName) triggeringButton = speakNameBtn;
+            else if (text === currentSituation) triggeringButton = speakSituationBtn;
+            else if (text === currentUserSituationEn) triggeringButton = speakCustomSituationBtn;
+
+            // Apply loader to the specific button if identified
+            if (triggeringButton) {
+                setProcessingState(true, triggeringButton);
+            }
+
+            const audioResponse = await generateAudio(text);
+            if (audioResponse) {
+                try {
+                    const sampleRate = parseInt(audioResponse.mimeType.match(/rate=(\d+)/)[1], 10);
+                    const pcmData = base64ToArrayBuffer(audioResponse.data);
+                    const wavBlob = pcmToWav(new Int16Array(pcmData), sampleRate);
+                    const audioUrl = URL.createObjectURL(wavBlob);
+                    
+                    audioPlayer.src = audioUrl;
+                    audioPlayer.play();
+                    audioPlayer.onended = () => {
+                        setProcessingState(false, triggeringButton); // Pass button back
+                        URL.revokeObjectURL(audioUrl);
+                    };
+                } catch (e) {
+                    console.error("Error processing audio:", e);
+                    alertUser("Erro ao processar o áudio.");
+                    setProcessingState(false, triggeringButton); // Pass button back
+                }
+            } else {
+                setProcessingState(false, triggeringButton); // Pass button back
+            }
+        }
+
+        // --- Event Listeners ---
+        generateBtn.addEventListener('click', handleGenerateNewObject);
+        revealNameBtn.addEventListener('click', handleRevealName);
+        generateSituationBtn.addEventListener('click', handleGenerateSituation);
+        translateSituationBtn.addEventListener('click', handleTranslateSituation);
+        speakNameBtn.addEventListener('click', () => playAudioForText(currentObjectName, speakNameBtn));
+        speakSituationBtn.addEventListener('click', () => playAudioForText(currentSituation, speakSituationBtn));
+        
+        // Event listeners for custom situation
+        customSituationInput.addEventListener('input', updateButtonStates); // Update button state as user types
+        translateCustomSituationBtn.addEventListener('click', handleCustomTranslateSituation);
+        speakCustomSituationBtn.addEventListener('click', () => playAudioForText(currentUserSituationEn, speakCustomSituationBtn));
+
+        // --- Initial Load ---
+        window.addEventListener('load', () => {
+            resetUI();
+            situationTextEl.textContent = 'Gere um objeto para começar.'; // Initial message
+            updateButtonStates(); // Initial button state update
+        });
+    </script>
 </body>
 </html>
